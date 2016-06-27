@@ -1,4 +1,4 @@
-package saldo;
+package operacoes.saque;
 
 public class SaldoInsuficienteException extends Exception {
 

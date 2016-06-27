@@ -1,6 +1,4 @@
-package repository;
-
-import dinheiro.Nota;
+package dinheiro;
 
 import java.util.List;
 

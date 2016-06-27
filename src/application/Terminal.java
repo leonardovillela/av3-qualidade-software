@@ -1,16 +1,21 @@
 package application;
 
 import dinheiro.Nota;
-import repository.NotaRepository;
-import repository.NotaRepositoryMock;
-import saldo.CaixaEletronico;
-import saldo.SaldoInsuficienteException;
+import dinheiro.NotaRepository;
+import dinheiro.NotaRepositoryMock;
+import operacoes.CaixaEletronico;
+import operacoes.saque.MultiploNaoEncontradoException;
+import operacoes.saque.SaldoInsuficienteException;
 
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.lang.System.mapLibraryName;
 import static java.lang.System.out;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toMap;
 
 public class Terminal {
     
@@ -34,16 +39,18 @@ public class Terminal {
             int opcao = teclado.nextInt();
             switch(opcao) {
                 case 1:
+                    imprimeReposicao();
                     processaNotasCadastradas();
                     break;
                 case 2:
                     try {
                         sacar();
-                    } catch(SaldoInsuficienteException e) {
+                    } catch(SaldoInsuficienteException | MultiploNaoEncontradoException e) {
                         out.println(e.getMessage());
                     }
                     break;
                 case 3:
+                    this.imprimeCabecalhoSaldo();
                     this.imprimeSaldo();
                     break;
                 case 4:
@@ -56,11 +63,39 @@ public class Terminal {
         }
     }
 
-    private void sacar() throws SaldoInsuficienteException {
+    private void sacar() throws SaldoInsuficienteException, MultiploNaoEncontradoException {
         impremeMensagemSaque();
         Nota nota = obtemQuantidadeSolicitadaSaque();
         caixa.sacar(nota);
         imprimeMensagemSaqueResultado();
+    }
+
+
+    private void imprimeSaldo() {
+        StringBuilder mensagem = new StringBuilder();
+
+         mensagem
+            .append("\nO Saldo é: " + caixa.getSaldo())
+            .append("\nQuantidade de saques: " + caixa.getQuantidadeSaques())
+            .append("\nValor dos saques: " + caixa.getValorTotalSaques() + "\n")
+            .append(obtemTotalNotas());
+
+        out.println(mensagem);
+    }
+
+    private String obtemTotalNotas() {
+        Map<Double, List<Nota>> notasAgrupadas = caixa.obterNotasAgrupadas();
+
+        return notasAgrupadas
+            .entrySet()
+            .stream()
+            .map(this::formataTotalNota)
+            .collect(joining("\n"));
+    }
+
+    private String formataTotalNota(Entry<Double, List<Nota>> entry) {
+        int quantidade = entry.getValue().size();
+        return String.format("Total de notas de %s - %d", entry.getKey(), quantidade);
     }
 
     private Nota obtemQuantidadeSolicitadaSaque() {
@@ -76,11 +111,7 @@ public class Terminal {
     private void processaNota(Nota nota) {
         imprimeMensagemQuantidade(nota);
         int quantidade = teclado.nextInt();
-        adicionaQuantidadeNota(quantidade, nota);
-    }
-    
-    private void adicionaQuantidadeNota(int quantidade, Nota nota) {
-        Stream.of(quantidade).forEach(qtd -> caixa.depositar(nota));
+        caixa.adicionaQuantidadeNota(quantidade, nota);
     }
     
     private void imprimeMensagemQuantidade(Nota nota) {
@@ -97,14 +128,14 @@ public class Terminal {
         out.println("4- Fim");
         out.print("Opção: ");
     }
-    
-    private void imprimeSaldo() {
+
+
+    private void imprimeCabecalhoSaldo() {
         out.println("\n---------------------------------------");
         out.println("\nCaixa Eletrônico - Consulta de Saldo");
         out.println("\n---------------------------------------");
-        out.println(caixa.getSaldo());
     }
-    
+
     private void imprimeReposicao() {
         System.out.println("\n---------------------------------------");
         System.out.println("Caixa Eletrônico - Reposição de notas");
